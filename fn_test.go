@@ -8,26 +8,37 @@ import (
 )
 
 func TestHello(t *testing.T) {
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	q := r.URL.Query()
-	q.Add("name", "toshi0607")
-	r.URL.RawQuery = q.Encode()
-
-	Hello(w, r)
-
-	rw := w.Result()
-	defer rw.Body.Close()
-	wantStatus := http.StatusOK
-	if s := rw.StatusCode; s != wantStatus {
-		t.Fatalf("got: %d, want: %d", s, wantStatus)
+	tests := map[string]struct {
+		name string
+		wantStatus     int
+		wantString string
+	}{
+		"name specified": {"toshi0607", http.StatusOK, "Hello, toshi0607!"},
+		"name not specified": {"", http.StatusOK, "Hello, someone!"},
 	}
-	b, err := ioutil.ReadAll(rw.Body)
-	if err != nil {
-		t.Fatal("failed to read res body")
-	}
-	wantString := "Hello, toshi0607!"
-	if s := string(b); s != wantString {
-		t.Fatalf("got: %s, want: %s", s, wantString)
+
+	for name, te := range tests {
+		t.Run(name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			q := r.URL.Query()
+			q.Add("name", te.name)
+			r.URL.RawQuery = q.Encode()
+
+			Hello(w, r)
+
+			rw := w.Result()
+			defer rw.Body.Close()
+			if s := rw.StatusCode; s != te.wantStatus {
+				t.Fatalf("got: %d, want: %d", s, te.wantStatus)
+			}
+			b, err := ioutil.ReadAll(rw.Body)
+			if err != nil {
+				t.Fatal("failed to read res body")
+			}
+			if s := string(b); s != te.wantString {
+				t.Fatalf("got: %s, want: %s", s, te.wantString)
+			}
+		})
 	}
 }
